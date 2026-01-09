@@ -2,27 +2,27 @@
 #
 # How to build:
 #
-# docker build -t arkcase/artemis:latest .
+# docker build -t arkcase/tika:latest .
 #
 # How to run: (Helm)
 #
 # helm repo add arkcase https://arkcase.github.io/ark_helm_charts/
-# helm install ark-artemis arkcase/ark-artemis
-# helm uninstall ark-artemis
+# helm install ark-tika arkcase/ark-tika
+# helm uninstall ark-tika
 #
 # How to run: (Docker)
 #
-# docker run --name ark_artemis -p 8443:8443  -d arkcase/artemis:latest
-# docker exec -it ark_artemis /bin/bash
-# docker stop ark_artemis
-# docker rm ark_artemis
+# docker run --name ark_tika -p 8443:8443  -d arkcase/tika:latest
+# docker exec -it ark_tika /bin/bash
+# docker stop ark_tika
+# docker rm ark_tika
 #
 # How to run: (Kubernetes)
 #
-# kubectl create -f pod_ark_artemis.yaml
-# kubectl --namespace default port-forward artemis 8443:8443 --address='0.0.0.0'
-# kubectl exec -it pod/artemis -- bash
-# kubectl delete -f pod_ark_artemis.yaml
+# kubectl create -f pod_ark_tika.yaml
+# kubectl --namespace default port-forward tika 8443:8443 --address='0.0.0.0'
+# kubectl exec -it pod/tika -- bash
+# kubectl delete -f pod_ark_tika.yaml
 #
 ###########################################################################################################
 
@@ -63,7 +63,7 @@ ARG JAVA
 
 LABEL ORG="Armedia LLC"
 LABEL MAINTAINER="Armedia Devops Team <devops@armedia.com>"
-LABEL APP="Artemis"
+LABEL APP="Tika"
 LABEL VERSION="${VER}"
 
 # Environment variables: ActiveMQ directories
