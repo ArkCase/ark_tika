@@ -131,9 +131,6 @@ RUN rm -rf /tmp/* && \
     chown -R "${APP_USER}:${APP_GROUP}" "${BASE_DIR}" && \
     chmod -R "u=rwX,g=rX,o=" "${BASE_DIR}"
 
-COPY --chown=root:root stig/ /usr/share/stig/
-RUN cd /usr/share/stig && ./run-all
-
 #
 # Launch as the application's user
 #
