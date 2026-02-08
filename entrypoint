@@ -21,14 +21,22 @@ JAVA_TOOL_OPTIONS+="-XX:MinRAMPercentage=50.0 -XX:MaxRAMPercentage=80.0"
 export TEMP="${TEMP_DIR}"
 export TMP="${TEMP_DIR}"
 
-set_or_default CONF "${CONF_DIR}/server.xml"
-if is_file_readable "${CONF}" ; then
-	# TODO: Perform variable expansion in the XML!
-	PROCESSED_CONF="${CONF}"
-
-	CONF=( --config "${PROCESSED_CONF}" )
+# Check for tika-config.xml (mounted by Helm)
+set_or_default TIKA_CONFIG "${CONF_DIR}/tika-config.xml"
+if is_file_readable "${TIKA_CONFIG}" ; then
+  say "Using Tika configuration: ${TIKA_CONFIG}"
+  TIKA_CONF=( --config "${TIKA_CONFIG}" )
 else
-	CONF=()
+  say "No Tika configuration found at ${TIKA_CONFIG}, checking server.xml"
+  # Fallback to server.xml if it exists
+  set_or_default CONF "${CONF_DIR}/server.xml"
+  if is_file_readable "${CONF}" ; then
+    # TODO: Perform variable expansion in the XML!
+    PROCESSED_CONF="${CONF}"
+    TIKA_CONF=( --config "${PROCESSED_CONF}" )
+  else
+    TIKA_CONF=()
+  fi
 fi
 
 set_or_default LIB_DIR "${BASE_DIR}/lib"
@@ -39,6 +47,20 @@ if is_dir_readable "${LIB_DIR}" ; then
 		CP+="$(readlink -f "${lib}")"
 	done < <(find "${LIB_DIR}" -mindepth 1 -maxdepth 1 -type f -iname '*.jar' -o -iname '*.zip' | sort)
 fi
+
+# Add custom ArkCase JARs to classpath
+set_or_default CUSTOM_LIB_DIR "${LIB_DIR}/custom"
+if is_dir_readable "${CUSTOM_LIB_DIR}" ; then
+  say "Adding custom ArkCase JARs from ${CUSTOM_LIB_DIR}"
+  while read lib ; do
+   [ -n "${CP}" ] && CP+=":"
+   CP+="$(readlink -f "${lib}")"
+   say "  - Added: $(basename "${lib}")"
+  done < <(find "${CUSTOM_LIB_DIR}" -mindepth 1 -maxdepth 1 -type f -iname '*.jar' -o -iname '*.zip' | sort)
+else
+  say "No custom JAR directory found at ${CUSTOM_LIB_DIR}"
+fi
+
 [ -n "${CP}" ] && CP=(-cp "${CP}") || CP=()
 
 set_or_default MOD_DIR "${BASE_DIR}/mod"
@@ -51,5 +73,19 @@ if is_dir_readable "${MOD_DIR}" ; then
 fi
 [ -n "${MP}" ] && MP=(-p "${MP}") || MP=()
 
-CMD=( java "${CP[@]}" "${MP[@]}" -jar "/usr/local/bin/tika-server.jar" --port 8443 --no-fork --host "*" "${CONF[@]}" )
+say "Starting Tika Server"
+say "  Classpath: ${CP[*]}"
+say "  Module Path: ${MP[*]}"
+say "  Config: ${TIKA_CONF[*]}"
+say "  Listening on: *:8443"
+
+FULL_CLASSPATH="/usr/local/bin/tika-server.jar"
+if [ -n "${CP}" ]; then
+  CLASSPATH_VALUE="${CP[1]}"
+  FULL_CLASSPATH="${FULL_CLASSPATH}:${CLASSPATH_VALUE}"
+fi
+
+say "  Full Classpath: ${FULL_CLASSPATH}"
+
+CMD=( java -cp "${FULL_CLASSPATH}" "${MP[@]}" org.apache.tika.server.core.TikaServerCli --port 8443 --host "*" "${TIKA_CONF[@]}" )
 execute "${CMD[@]}"
