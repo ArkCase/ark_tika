@@ -24,35 +24,42 @@ export TMP="${TEMP_DIR}"
 # Check for tika-config.xml (mounted by Helm)
 set_or_default TIKA_CONFIG "${CONF_DIR}/tika-config.xml"
 if is_file_readable "${TIKA_CONFIG}" ; then
-  say "Using Tika configuration: ${TIKA_CONFIG}"
-  TIKA_CONF=( --config "${TIKA_CONFIG}" )
+	say "Using Tika configuration: ${TIKA_CONFIG}"
+	TIKA_CONF=( --config "${TIKA_CONFIG}" )
 else
-  say "No Tika configuration found at ${TIKA_CONFIG}, checking server.xml"
-  # Fallback to server.xml if it exists
-  set_or_default CONF "${CONF_DIR}/server.xml"
-  if is_file_readable "${CONF}" ; then
-    # TODO: Perform variable expansion in the XML!
-    PROCESSED_CONF="${CONF}"
-    TIKA_CONF=( --config "${PROCESSED_CONF}" )
-  else
-    TIKA_CONF=()
-  fi
+	say "No Tika configuration found at ${TIKA_CONFIG}, checking server.xml"
+	# Fallback to server.xml if it exists
+	set_or_default CONF "${CONF_DIR}/server.xml"
+	if is_file_readable "${CONF}" ; then
+		# TODO: Perform variable expansion in the XML!
+		PROCESSED_CONF="${CONF}"
+		TIKA_CONF=( --config "${PROCESSED_CONF}" )
+	else
+		TIKA_CONF=()
+	fi
 fi
 
+# Build classpath using wildcards
 set_or_default LIB_DIR "${BASE_DIR}/lib"
-set_or_default CUSTOM_LIB_DIR "${LIB_DIR}/custom"
-CP="${LIB_DIR}/*:${CUSTOM_LIB_DIR}/*"
-FULL_CLASSPATH="/usr/local/bin/tika-server.jar:${CP}"
+set_or_default EXTRA_CLASSPATH
+EXTRA_CLASSPATH="$(sanitize_pathspec "${EXTRA_CLASSPATH}")"
+CP="${LIB_DIR}/*${EXTRA_CLASSPATH:+:}${EXTRA_CLASSPATH}"
 
-# Build module path using wildcards
+# Build modulepath using wildcards
 set_or_default MOD_DIR "${BASE_DIR}/mod"
-MP="${MOD_DIR}/*"
+set_or_default EXTRA_MOD_DIR
+EXTRA_MOD_DIR="$(sanitize pathspec "${EXTRA_MOD_DIR}")"
+MP="${MOD_DIR}/*${EXTRA_MOD_DIR:+:}${EXTRA_MOD_DIR}"
+
+set_or_default PORT "8443"
 
 say "Starting Tika Server"
-say "  Classpath: ${FULL_CLASSPATH}"
-say "  Module Path: ${MP}"
-say "  Config: ${TIKA_CONF}"
-say "  Listening on: *:8443"
+say "\tClasspath: ${CP}"
+say "\tModule Path: ${MP}"
+say "\tConfig: ${TIKA_CONF[@]}"
+[ -n "${EXTRA_ARGS}" ] && say "\tArgs: [${EXTRA_ARGS}]"
+say "\tListening on: *:${PORT}"
 
-CMD=( java -cp "${FULL_CLASSPATH}" -p "${MP}" org.apache.tika.server.core.TikaServerCli --port 8443 --host "*" ${TIKA_CONF} )
-execute "${CMD[@]}"
+to_array EXTRA_ARGS || fail "The extra arguments string [${EXTRA_ARGS}] could not be converted into a BASH array"
+
+execute java -cp "/usr/local/bin/tika-server.jar:${CP}" -p "${MP}" org.apache.tika.server.core.TikaServerCli "${EXTRA_ARGS[@]}" --port "${PORT}" --host "*" "${TIKA_CONF[@]}"
