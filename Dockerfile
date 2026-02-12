@@ -132,17 +132,11 @@ RUN mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" && \
 #
 # Download custom ArkCase Tika helper JAR from Nexus
 #
-#RUN mkdir -p "${LIB_DIR}/custom" && \
-#    SRC="${ARK_TIKA_JAR_GROUP}:${ARK_TIKA_JAR_ARTIFACT}:${ARK_TIKA_JAR_VERSION}:${ARK_TIKA_JAR_CLASSIFIER}:${ARK_TIKA_JAR_TYPE}" && \
-#    mvn-get "${SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar" && \
-#    chown root:root "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar" && \
-#    chmod 0644 "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar"
-#
-# TODO: at the moment we don't have the jar on nexus, that's why I need this for local testing.
-# LOCAL TESTING ONLY - Copy JAR from build context
-RUN mkdir -p "${LIB_DIR}/custom"
-COPY --chown=root:root arkcase-tika-1.0.0-SNAPSHOT.jar "${LIB_DIR}/custom/arkcase-tika-1.0.0-SNAPSHOT.jar"
-RUN chmod 0644 "${LIB_DIR}/custom/arkcase-tika-1.0.0-SNAPSHOT.jar"
+RUN mkdir -p "${LIB_DIR}/custom" && \
+    SRC="${ARK_TIKA_JAR_GROUP}:${ARK_TIKA_JAR_ARTIFACT}:${ARK_TIKA_JAR_VERSION}" && \
+    mvn-get "${SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar" && \
+    chown root:root "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar" && \
+    chmod 0644 "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar"
 
 #
 # Install the remaining files
