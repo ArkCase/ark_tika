@@ -36,6 +36,11 @@ ARG APP_SRC="https://dlcdn.apache.org/tika/${VER}/tika-app-${VER}.jar"
 ARG SERVER_SRC="https://dlcdn.apache.org/tika/${VER}/tika-server-standard-${VER}.jar"
 ARG JAVA="17"
 
+ARG ARKCASE_MVN_REPO="https://nexus.armedia.com/repository/arkcase/"
+ARG ARK_TIKA_JAR_GROUP="com.armedia"
+ARG ARK_TIKA_JAR_ARTIFACT="arkcase-tika"
+ARG ARK_TIKA_JAR_VERSION="1.0.0-SNAPSHOT"
+
 ARG BASE_REGISTRY="${PUBLIC_REGISTRY}"
 ARG BASE_REPO="arkcase/base-java"
 ARG BASE_VER="22.04"
@@ -57,6 +62,11 @@ ARG APP_SRC
 ARG SERVER_SRC
 ARG JAVA
 
+ARG ARKCASE_MVN_REPO
+ARG ARK_TIKA_JAR_GROUP
+ARG ARK_TIKA_JAR_ARTIFACT
+ARG ARK_TIKA_JAR_VERSION
+
 #
 # Basic Parameters
 #
@@ -65,6 +75,7 @@ LABEL ORG="Armedia LLC"
 LABEL MAINTAINER="Armedia Devops Team <devops@armedia.com>"
 LABEL APP="Tika"
 LABEL VERSION="${VER}"
+LABEL ARK_TIKA_JAR_VERSION="${ARK_TIKA_JAR_VERSION}"
 
 # Environment variables: ActiveMQ directories
 ENV HOME_DIR="${BASE_DIR}/${PKG}"
@@ -84,10 +95,13 @@ WORKDIR "${BASE_DIR}"
 
 ENV PATH="${HOME_DIR}/bin:${PATH}"
 
+ENV ARK_TIKA_CLASSPATH="${LIB_DIR}/custom/*"
+
 #
 # Update local packages and install required packages
 #
 RUN set-java "${JAVA}" && \
+    apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get -y install \
         gdal-bin \
@@ -110,6 +124,15 @@ RUN set-java "${JAVA}" && \
 RUN mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" && \
     verified-download --no-hash --keys "${KEYS}" "${APP_SRC}" "/usr/local/bin/tika.jar" && \
     verified-download --no-hash --keys "${KEYS}" "${SERVER_SRC}" "/usr/local/bin/tika-server.jar"
+
+#
+# Download custom ArkCase Tika helper JAR from Nexus
+#
+RUN mkdir -p "${LIB_DIR}/custom" && \
+    SRC="${ARK_TIKA_JAR_GROUP}:${ARK_TIKA_JAR_ARTIFACT}:${ARK_TIKA_JAR_VERSION}" && \
+    mvn-get "${SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar" && \
+    chown root:root "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar" && \
+    chmod 0644 "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar"
 
 #
 # Install the remaining files
