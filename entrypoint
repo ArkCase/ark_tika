@@ -41,7 +41,7 @@ fi
 
 # Build classpath using wildcards
 set_or_default LIB_DIR "${BASE_DIR}/lib"
-set_or_default EXTRA_CLASSPATH
+set_or_default EXTRA_CLASSPATH "${LIB_DIR}/custom/*"
 EXTRA_CLASSPATH="$(sanitize_pathspec "${EXTRA_CLASSPATH}")"
 CP="${LIB_DIR}/*${EXTRA_CLASSPATH:+:}${EXTRA_CLASSPATH}"
 
