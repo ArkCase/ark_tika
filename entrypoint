@@ -52,6 +52,7 @@ EXTRA_MOD_DIR="$(sanitize_pathspec "${EXTRA_MOD_DIR}")"
 MP="${MOD_DIR}/*${EXTRA_MOD_DIR:+:}${EXTRA_MOD_DIR}"
 
 set_or_default PORT "8443"
+set_or_default EXTRA_ARGS
 
 say "Starting Tika Server"
 say "\tClasspath: ${CP}"
