@@ -3,6 +3,36 @@
 set -euo pipefail
 . /.functions
 
+process_template()
+{
+	local SRC="${1}"
+
+	local TPL="${SRC}"
+	[[ "${TPL,,}" =~ [.]tpl ]] || TPL+=".tpl"
+
+	# No template file, so short-circuit
+	if ! is_file "${TPL}" ; then
+		echo -n "${SRC}"
+		return 0
+	fi
+
+	require_file_readable "${TPL}"
+
+	# We have a template!! Process it!
+	local TGT="${TPL##*/}"
+	TGT="$(mktemp --tmpdir="${TEMP_DIR}" "XXXXXXXX.${TGT%.*}" 2>&1)" || return ${?}
+
+	local RC=0
+	OUT="$(envsubst < "${TPL}" > "${TGT}" 2>&1)" || RC=${?}
+	if [ ${RC} -ne 0 ] ; then
+		err "Failed to process the template from [${TPL}]: ${OUT}"
+		return ${RC}
+	fi
+
+	echo -n "${TGT}"
+	return 0
+}
+
 # Update the SSL stuff
 init_ssl
 
@@ -21,23 +51,25 @@ JAVA_TOOL_OPTIONS+="-XX:MinRAMPercentage=50.0 -XX:MaxRAMPercentage=80.0"
 export TEMP="${TEMP_DIR}"
 export TMP="${TEMP_DIR}"
 
-# Check for tika-config.xml (mounted by Helm)
 set_or_default TIKA_CONFIG "${CONF_DIR}/tika-config.xml"
-if is_file_readable "${TIKA_CONFIG}" ; then
-	say "Using Tika configuration: ${TIKA_CONFIG}"
-	TIKA_CONF=( --config "${TIKA_CONFIG}" )
-else
-	say "No Tika configuration found at ${TIKA_CONFIG}, checking server.xml"
-	# Fallback to server.xml if it exists
-	set_or_default CONF "${CONF_DIR}/server.xml"
-	if is_file_readable "${CONF}" ; then
-		# TODO: Perform variable expansion in the XML!
-		PROCESSED_CONF="${CONF}"
-		TIKA_CONF=( --config "${PROCESSED_CONF}" )
-	else
-		TIKA_CONF=()
-	fi
-fi
+CONFIG_CANDIDATES=( "${TIKA_CONFIG}" "${CONF_DIR}/server.xml" )
+
+TIKA_CONF=()
+for CONFIG in "${CANDIDATES[@]}" ; do
+	is_file_readable "${CONFIG}" || continue
+
+	# If this is a template file, expand it!
+	FINAL_CONFIG="$(process_template "${CONFIG}" 2>&1)" || fail "Failed to process the template file at [${CONFIG}] (rc=${?}): ${FINAL_CONFIG}"
+	say "Using the Tika configuration from [${CONFIG}]"
+	[ "${FINAL_CONFIG}" != "${CONFIG}" ] && eyes "\tThe file was a template, and it was processed into [${FINAL_CONFIG}]"
+
+	# Validate the XML!
+	OUT="$(xmllint "${FINAL_CONFIG}" 2>&1)" || fail "The resulting template was not valid XML (rc=${?}): ${OUT}"
+
+	# It's good! Use it!
+	TIKA_CONF=( --config "${FINAL_CONFIG}" )
+	break
+done
 
 # Build classpath using wildcards
 set_or_default LIB_DIR "${BASE_DIR}/lib"
@@ -63,4 +95,6 @@ say "\tListening on: *:${PORT}"
 
 to_array EXTRA_ARGS || fail "The extra arguments string [${EXTRA_ARGS}] could not be converted into a BASH array"
 
-execute java -cp "/usr/local/bin/tika-server.jar:${CP}" -p "${MP}" org.apache.tika.server.core.TikaServerCli "${EXTRA_ARGS[@]}" --port "${PORT}" --host "*" "${TIKA_CONF[@]}"
+set_or_default TIKA_SERVER_CLASS "org.apache.tika.server.core.TikaServerCli"
+
+execute java -cp "/usr/local/bin/tika-server.jar:${CP}" -p "${MP}" "${TIKA_SERVER_CLASS}" "${EXTRA_ARGS[@]}" --port "${PORT}" --host "*" "${TIKA_CONF[@]}"
