@@ -3,34 +3,33 @@
 set -euo pipefail
 . /.functions
 
-process_template()
+render_configuration()
 {
-	local SRC="${1}"
+	local CONFIG="${1}"
+	local FINAL_CONFIG="${2}"
 
-	local TPL="${SRC}"
-	[[ "${TPL,,}" =~ [.]tpl ]] || TPL+=".tpl"
+	is_file_readable "${CONFIG}" || return 1
 
-	# No template file, so short-circuit
-	if ! is_file "${TPL}" ; then
-		echo -n "${SRC}"
-		return 0
-	fi
-
-	require_file_readable "${TPL}"
-
-	# We have a template!! Process it!
-	local TGT="${TPL##*/}"
-	TGT="$(mktemp --tmpdir="${TEMP_DIR}" "XXXXXXXX.${TGT%.*}" 2>&1)" || return ${?}
-
-	local RC=0
-	OUT="$(envsubst < "${TPL}" > "${TGT}" 2>&1)" || RC=${?}
+	eyes "Trying the Tika configuration from [${CONFIG}]"
+	RC=0
+	OUT="$(xmllint "${CONFIG}" 2>&1)" || RC=${?}
 	if [ ${RC} -ne 0 ] ; then
-		err "Failed to process the template from [${TPL}]: ${OUT}"
-		return ${RC}
+		err "The source configuration file at [${CONFIG}] was not valid XML (rc=${RC}): ${OUT}"
+		return 1
 	fi
 
-	echo -n "${TGT}"
-	return 0
+	ok "The Tika configuration at [${CONFIG}] seems to be valid - will attempt to patch it!"
+	if "${XML_CMD[@]}" < "${CONFIG}" &> "${FINAL_CONFIG}" ; then
+		ok "Patched the configuration from [${CONFIG}] with the required changes"
+
+		# Verify the final result!
+		OUT="$(xmllint "${FINAL_CONFIG}" 2>&1)" && return 0
+		err "The final configuration file rendered from [${CONFIG}] was not valid XML (rc=${?}): ${OUT}"
+	else
+		err "Failed to process the configuration file from [${CONFIG}] (rc=${?}): $(<"${FINAL_CONFIG}")"
+	fi
+
+	return 1
 }
 
 # Update the SSL stuff
@@ -54,19 +53,29 @@ export TMP="${TEMP_DIR}"
 set_or_default TIKA_CONFIG "${CONF_DIR}/tika-config.xml"
 CONFIG_CANDIDATES=( "${TIKA_CONFIG}" "${CONF_DIR}/server.xml" )
 
+set_or_default SSL_DIR
+set_or_default POD_NAME "$(hostname -f)"
+set_as_boolean DEBUG_LOG "false"
+
 TIKA_CONF=()
+FINAL_CONFIG="${CONF_DIR}/runtime-config-$(date -u "+%Y%m%d-%H%M%SZ").xml"
+as_boolean "${DEBUG_LOG}" && LOG_LEVEL="debug" || LOG_LEVEL="info"
+JAVA_KEYSTORE_PASSWORD="$(<"${SSL_DIR}/keystore.pass")"
+
+XML_CMD=(
+	xmlstarlet ed -P
+		--update '/properties/server/params/id' --value "${POD_NAME}"
+		--update '/properties/server/params/logLevel' --value "${LOG_LEVEL}"
+		--update '/properties/server/tlsConfig/params/keyStoreType' --value "${JAVA_KEYSTORE_TYPE}"
+		--update '/properties/server/tlsConfig/params/keyStoreFile' --value "${JAVA_KEYSTORE}"
+		--update '/properties/server/tlsConfig/params/keyStorePassword' --value "${JAVA_KEYSTORE_PASSWORD}"
+		--update '/properties/server/tlsConfig/params/trustStoreType' --value "${JAVA_KEYSTORE_TYPE}"
+		--update '/properties/server/tlsConfig/params/trustStoreFile' --value "${JAVA_KEYSTORE}"
+		--update '/properties/server/tlsConfig/params/trustStorePassword' --value "${JAVA_KEYSTORE_PASSWORD}"
+)
+
 for CONFIG in "${CANDIDATES[@]}" ; do
-	is_file_readable "${CONFIG}" || continue
-
-	# If this is a template file, expand it!
-	FINAL_CONFIG="$(process_template "${CONFIG}" 2>&1)" || fail "Failed to process the template file at [${CONFIG}] (rc=${?}): ${FINAL_CONFIG}"
-	say "Using the Tika configuration from [${CONFIG}]"
-	[ "${FINAL_CONFIG}" != "${CONFIG}" ] && eyes "\tThe file was a template, and it was processed into [${FINAL_CONFIG}]"
-
-	# Validate the XML!
-	OUT="$(xmllint "${FINAL_CONFIG}" 2>&1)" || fail "The resulting template was not valid XML (rc=${?}): ${OUT}"
-
-	# It's good! Use it!
+	render_configuration "${CONFIG}" "${FINAL_CONFIG}" || continue
 	TIKA_CONF=( --config "${FINAL_CONFIG}" )
 	break
 done
@@ -89,7 +98,7 @@ set_or_default EXTRA_ARGS
 say "Starting Tika Server"
 say "\tClasspath: ${CP}"
 say "\tModule Path: ${MP}"
-say "\tConfig: ${TIKA_CONF[@]}"
+[ ${#TIKA_CONF[@]} -gt 0 ] && say "\tConfig: ${TIKA_CONF[@]}"
 [ -n "${EXTRA_ARGS}" ] && say "\tArgs: [${EXTRA_ARGS}]"
 say "\tListening on: *:${PORT}"
 
