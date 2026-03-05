@@ -40,6 +40,9 @@ ARG ARKCASE_MVN_REPO="https://nexus.armedia.com/repository/arkcase/"
 ARG ARK_TIKA_JAR_GROUP="com.armedia"
 ARG ARK_TIKA_JAR_ARTIFACT="arkcase-tika"
 ARG ARK_TIKA_JAR_VERSION="1.0.0-SNAPSHOT"
+ARG ARK_TIKA_JAR_SRC="${ARK_TIKA_JAR_GROUP}:${ARK_TIKA_JAR_ARTIFACT}:${ARK_TIKA_JAR_VERSION}"
+
+ARG TIKA_GROUP="org.apache.tika"
 
 ARG BASE_REGISTRY="${PUBLIC_REGISTRY}"
 ARG BASE_REPO="arkcase/base-java"
@@ -57,15 +60,14 @@ ARG APP_UID="1999"
 ARG APP_GID="${APP_UID}"
 ARG APP_USER="${PKG}"
 ARG APP_GROUP="${APP_USER}"
-ARG KEYS
 ARG APP_SRC
 ARG SERVER_SRC
 ARG JAVA
 
 ARG ARKCASE_MVN_REPO
-ARG ARK_TIKA_JAR_GROUP
-ARG ARK_TIKA_JAR_ARTIFACT
 ARG ARK_TIKA_JAR_VERSION
+ARG ARK_TIKA_JAR_SRC
+ARG TIKA_GROUP
 
 #
 # Basic Parameters
@@ -80,8 +82,6 @@ LABEL ARK_TIKA_JAR_VERSION="${ARK_TIKA_JAR_VERSION}"
 # Environment variables: ActiveMQ directories
 ENV HOME_DIR="${BASE_DIR}/${PKG}"
 
-ENV LIB_DIR="${BASE_DIR}/lib"
-
 # Environment variables: system stuff
 ENV APP_UID="${APP_UID}"
 ENV APP_GID="${APP_GID}"
@@ -94,8 +94,6 @@ ENV USER="${APP_USER}"
 WORKDIR "${BASE_DIR}"
 
 ENV PATH="${HOME_DIR}/bin:${PATH}"
-
-ENV ARK_TIKA_CLASSPATH="${LIB_DIR}/custom/*"
 
 #
 # Update local packages and install required packages
@@ -116,23 +114,20 @@ RUN set-java "${JAVA}" && \
     apt-get -y install \
         fonts-liberation \
         ttf-mscorefonts-installer \
-        wget \
         cabextract \
       && \
     apt-get clean -y
 
-RUN mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" && \
-    verified-download --no-hash --keys "${KEYS}" "${APP_SRC}" "/usr/local/bin/tika.jar" && \
-    verified-download --no-hash --keys "${KEYS}" "${SERVER_SRC}" "/usr/local/bin/tika-server.jar"
-
-#
-# Download custom ArkCase Tika helper JAR from Nexus
-#
-RUN mkdir -p "${LIB_DIR}/custom" && \
-    SRC="${ARK_TIKA_JAR_GROUP}:${ARK_TIKA_JAR_ARTIFACT}:${ARK_TIKA_JAR_VERSION}" && \
-    mvn-get "${SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar" && \
-    chown root:root "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar" && \
-    chmod 0644 "${LIB_DIR}/custom/${ARK_TIKA_JAR_ARTIFACT}-${ARK_TIKA_JAR_VERSION}.jar"
+RUN umask 0027 && \
+    mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-app:${VER}" "/usr/local/bin/tika.jar" && \
+    mvn-get "${TIKA_GROUP}:tika-server-standard:${VER}" "/usr/local/bin/tika-server.jar" && \
+    mvn-get "${TIKA_GROUP}:tika-emitter-fs:${VER}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-emitter-jdbc:${VER}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-emitter-s3:${VER}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-emitter-solr:${VER}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-fetcher-s3:${VER}" "${LIB_DIR}" && \
+    mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
 
 #
 # Install the remaining files

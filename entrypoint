@@ -19,7 +19,7 @@ render_configuration()
 	fi
 
 	ok "The Tika configuration at [${CONFIG}] seems to be valid - will attempt to patch it!"
-	if "${XML_CMD[@]}" < "${CONFIG}" &> "${FINAL_CONFIG}" ; then
+	if xmlenvsubst < "${CONFIG}" &> "${FINAL_CONFIG}" ; then
 		ok "Patched the configuration from [${CONFIG}] with the required changes"
 
 		# Verify the final result!
@@ -62,18 +62,6 @@ FINAL_CONFIG="${CONF_DIR}/runtime-config-$(date -u "+%Y%m%d-%H%M%SZ").xml"
 as_boolean "${DEBUG_LOG}" && LOG_LEVEL="debug" || LOG_LEVEL="info"
 JAVA_KEYSTORE_PASSWORD="$(<"${SSL_DIR}/keystore.pass")"
 
-XML_CMD=(
-	xmlstarlet ed -P
-		--update '/properties/server/params/id' --value "${POD_NAME}"
-		--update '/properties/server/params/logLevel' --value "${LOG_LEVEL}"
-		--update '/properties/server/tlsConfig/params/keyStoreType' --value "${JAVA_KEYSTORE_TYPE}"
-		--update '/properties/server/tlsConfig/params/keyStoreFile' --value "${JAVA_KEYSTORE}"
-		--update '/properties/server/tlsConfig/params/keyStorePassword' --value "${JAVA_KEYSTORE_PASSWORD}"
-		--update '/properties/server/tlsConfig/params/trustStoreType' --value "${JAVA_KEYSTORE_TYPE}"
-		--update '/properties/server/tlsConfig/params/trustStoreFile' --value "${JAVA_KEYSTORE}"
-		--update '/properties/server/tlsConfig/params/trustStorePassword' --value "${JAVA_KEYSTORE_PASSWORD}"
-)
-
 for CONFIG in "${CANDIDATES[@]}" ; do
 	render_configuration "${CONFIG}" "${FINAL_CONFIG}" || continue
 	TIKA_CONF=( --config "${FINAL_CONFIG}" )
@@ -82,7 +70,7 @@ done
 
 # Build classpath using wildcards
 set_or_default LIB_DIR "${BASE_DIR}/lib"
-set_or_default EXTRA_CLASSPATH "${LIB_DIR}/custom/*"
+set_or_default EXTRA_CLASSPATH "${LIB_DIR}/*"
 EXTRA_CLASSPATH="$(sanitize_pathspec "${EXTRA_CLASSPATH}")"
 CP="${LIB_DIR}/*${EXTRA_CLASSPATH:+:}${EXTRA_CLASSPATH}"
 
