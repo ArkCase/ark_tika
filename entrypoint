@@ -3,6 +3,11 @@
 set -euo pipefail
 . /.functions
 
+#
+# Init all the SSL-related stuff
+#
+init_ssl
+
 render_configuration()
 {
 	local CONFIG="${1}"
@@ -32,15 +37,9 @@ render_configuration()
 	return 1
 }
 
-# Update the SSL stuff
-init_ssl
-
 require_dir_readable "${CONF_DIR}"
 require_dir_readwrite "${LOGS_DIR}"
 require_dir_readwrite "${TEMP_DIR}"
-
-JAVA_KEYSTORE_PASSWORD="$(<"${SSL_DIR}/keystore.pass")" || fail "Failed to read the SSL keystore password"
-JAVA_TRUSTSTORE_PASSWORD="${JAVA_KEYSTORE_PASSWORD}"
 
 set_or_default JAVA_TOOL_OPTIONS ""
 
@@ -60,7 +59,6 @@ set_as_boolean DEBUG_LOG "false"
 TIKA_CONF=()
 FINAL_CONFIG="${CONF_DIR}/runtime-config-$(date -u "+%Y%m%d-%H%M%SZ").xml"
 as_boolean "${DEBUG_LOG}" && LOG_LEVEL="debug" || LOG_LEVEL="info"
-JAVA_KEYSTORE_PASSWORD="$(<"${SSL_DIR}/keystore.pass")"
 
 for CONFIG in "${CANDIDATES[@]}" ; do
 	render_configuration "${CONFIG}" "${FINAL_CONFIG}" || continue
