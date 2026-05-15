@@ -30,11 +30,13 @@ ARG FIPS=""
 ARG PUBLIC_REGISTRY="public.ecr.aws"
 ARG ARCH="amd64"
 ARG OS="linux"
-ARG VER="3.2.3"
+ARG VER="3.3.0"
 ARG PKG="tika"
 ARG KEYS="https://www.apache.org/dist/tika/KEYS"
 ARG APP_SRC="https://dlcdn.apache.org/tika/${VER}/tika-app-${VER}.jar"
 ARG SERVER_SRC="https://dlcdn.apache.org/tika/${VER}/tika-server-standard-${VER}.jar"
+ARG LOG4J_VER="2.25.3"
+ARG LOG4J_JUL_SRC="org.apache.logging.log4j:log4j-jul:${LOG4J_VER}:jar"
 ARG JAVA="17"
 
 ARG ARKCASE_MVN_REPO="https://nexus.armedia.com/repository/arkcase/"
@@ -64,6 +66,7 @@ ARG APP_USER="${PKG}"
 ARG APP_GROUP="${APP_USER}"
 ARG APP_SRC
 ARG SERVER_SRC
+ARG LOG4J_JUL_SRC
 ARG JAVA
 
 ARG ARKCASE_MVN_REPO
@@ -129,6 +132,7 @@ RUN umask 0022 && \
     mvn-get "${TIKA_GROUP}:tika-emitter-s3:${VER}" "${LIB_DIR}" && \
     mvn-get "${TIKA_GROUP}:tika-emitter-solr:${VER}" "${LIB_DIR}" && \
     mvn-get "${TIKA_GROUP}:tika-fetcher-s3:${VER}" "${LIB_DIR}" && \
+    mvn-get "${LOG4J_JUL_SRC}" "${LIB_DIR}" && \
     mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
 
 #

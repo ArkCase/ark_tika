@@ -44,7 +44,7 @@ require_dir_readwrite "${TEMP_DIR}"
 set_or_default JAVA_TOOL_OPTIONS ""
 
 # Require SSL for Zookeeper
-JAVA_TOOL_OPTIONS+="-XX:MinRAMPercentage=50.0 -XX:MaxRAMPercentage=80.0"
+JAVA_TOOL_OPTIONS+="${JAVA_TOOL_OPTIONS:+ }-XX:MinRAMPercentage=50.0 -XX:MaxRAMPercentage=80.0 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"
 
 export TEMP="${TEMP_DIR}"
 export TMP="${TEMP_DIR}"
