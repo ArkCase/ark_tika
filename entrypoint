@@ -58,9 +58,10 @@ set_as_boolean DEBUG_LOG "false"
 
 TIKA_CONF=()
 FINAL_CONFIG="${CONF_DIR}/runtime-config-$(date -u "+%Y%m%d-%H%M%SZ").xml"
-as_boolean "${DEBUG_LOG}" && LOG_LEVEL="debug" || LOG_LEVEL="info"
+export LOG_LEVEL="info"
+as_boolean "${DEBUG_LOG}" && LOG_LEVEL="debug"
 
-for CONFIG in "${CANDIDATES[@]}" ; do
+for CONFIG in "${CONFIG_CANDIDATES[@]}" ; do
 	render_configuration "${CONFIG}" "${FINAL_CONFIG}" || continue
 	TIKA_CONF=( --config "${FINAL_CONFIG}" )
 	break
