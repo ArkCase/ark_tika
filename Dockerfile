@@ -120,7 +120,7 @@ RUN set-java "${JAVA}" && \
       && \
     apt-get clean -y
 
-RUN umask 0027 && \
+RUN umask 0022 && \
     mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" "${LIB_DIR}" && \
     mvn-get "${TIKA_GROUP}:tika-app:${VER}" "/usr/local/bin/tika.jar" && \
     mvn-get "${TIKA_GROUP}:tika-server-standard:${VER}" "/usr/local/bin/tika-server.jar" && \
