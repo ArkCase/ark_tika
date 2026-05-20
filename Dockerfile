@@ -148,8 +148,7 @@ RUN groupadd --gid "${APP_GID}" "${APP_GROUP}" && \
 
 COPY --chown=${APP_GID}:${APP_UID} --chmod=0644 server.xml "${CONF_DIR}/server.xml"
 
-COPY --chown=root:root --chmod=0755 CVE /CVE
-RUN apply-fixes /CVE
+RUN --mount=type=bind,source=CVE,target=/CVE apply-fixes /CVE
 
 RUN rm -rf /tmp/* && \
     mkdir -p "${HOME_DIR}/bin" && \
