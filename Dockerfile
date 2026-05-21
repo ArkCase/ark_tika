@@ -33,8 +33,6 @@ ARG OS="linux"
 ARG VER="3.3.0"
 ARG PKG="tika"
 ARG KEYS="https://www.apache.org/dist/tika/KEYS"
-ARG APP_SRC="https://dlcdn.apache.org/tika/${VER}/tika-app-${VER}.jar"
-ARG SERVER_SRC="https://dlcdn.apache.org/tika/${VER}/tika-server-standard-${VER}.jar"
 ARG LOG4J_VER="2.25.3"
 ARG LOG4J_JUL_SRC="org.apache.logging.log4j:log4j-jul:${LOG4J_VER}:jar"
 ARG JAVA="17"
@@ -45,7 +43,9 @@ ARG ARK_TIKA_JAR_ARTIFACT="arkcase-tika"
 ARG ARK_TIKA_JAR_VERSION="1.0.0-TEST-01"
 ARG ARK_TIKA_JAR_SRC="${ARK_TIKA_JAR_GROUP}:${ARK_TIKA_JAR_ARTIFACT}:${ARK_TIKA_JAR_VERSION}"
 
+ARG TIKA_MVN_REPO="https://nexus.armedia.com/repository/arkcase.thirdparty/"
 ARG TIKA_GROUP="org.apache.tika"
+ARG TIKA_VER="${VER}-arm01"
 
 ARG BASE_REGISTRY="${PUBLIC_REGISTRY}"
 ARG BASE_REPO="arkcase/base-java"
@@ -64,15 +64,15 @@ ARG APP_UID="1999"
 ARG APP_GID="${APP_UID}"
 ARG APP_USER="${PKG}"
 ARG APP_GROUP="${APP_USER}"
-ARG APP_SRC
-ARG SERVER_SRC
 ARG LOG4J_JUL_SRC
 ARG JAVA
 
 ARG ARKCASE_MVN_REPO
 ARG ARK_TIKA_JAR_VERSION
 ARG ARK_TIKA_JAR_SRC
+ARG TIKA_MVN_REPO
 ARG TIKA_GROUP
+ARG TIKA_VER
 
 #
 # Basic Parameters
@@ -123,15 +123,17 @@ RUN set-java "${JAVA}" && \
       && \
     apt-get clean -y
 
-RUN umask 0022 && \
+RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
+    . /run/secrets/mvn_get_auth && \
+    umask 0022 && \
     mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-app:${VER}" "/usr/local/bin/tika.jar" && \
-    mvn-get "${TIKA_GROUP}:tika-server-standard:${VER}" "/usr/local/bin/tika-server.jar" && \
-    mvn-get "${TIKA_GROUP}:tika-emitter-fs:${VER}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-emitter-jdbc:${VER}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-emitter-s3:${VER}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-emitter-solr:${VER}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-fetcher-s3:${VER}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-app:${TIKA_VER}" "${TIKA_MVN_REPO}" "/usr/local/bin/tika.jar" && \
+    mvn-get "${TIKA_GROUP}:tika-server-standard:${TIKA_VER}" "${TIKA_MVN_REPO}" "/usr/local/bin/tika-server.jar" && \
+    mvn-get "${TIKA_GROUP}:tika-emitter-fs:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-emitter-jdbc:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-emitter-s3:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-emitter-solr:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
+    mvn-get "${TIKA_GROUP}:tika-fetcher-s3:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${LOG4J_JUL_SRC}" "${LIB_DIR}" && \
     mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
 
