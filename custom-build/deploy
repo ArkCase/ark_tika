@@ -1,0 +1,46 @@
+#!/bin/bash
+
+set -euo pipefail
+. /.functions
+
+REPOSITORY_ID="arkcase.thirdparty"
+REPOSITORY="https://nexus.armedia.com/repository/arkcase.thirdparty"
+
+GROUP_ID="org.apache.tika"
+
+BASE_VERSION="3.3.1"
+VERSION="${BASE_VERSION}-arm01"
+
+# Artifacts:
+#	tika-app
+#	tika-emitter-fs
+#	tika-emitter-jdbc
+#	tika-emitter-s3
+#	tika-emitter-solr
+#	tika-fetcher-s3
+#	tika-server-standard
+
+for FILE in "${@}" ; do
+	SRC_FILE="$(readlink -f "${FILE}")"
+
+	NAME="$(basename "${FILE}")"
+	PACKAGING="${NAME##*.}"
+	NAME="${NAME%.*}"
+
+	ARTIFACT_ID="${NAME//-${BASE_VERSION}/}"
+
+	CMD=(
+		mvn deploy:deploy-file
+			-DrepositoryId="${REPOSITORY_ID}"
+			-Durl="${REPOSITORY}"
+			-DgroupId="${GROUP_ID}"
+			-DartifactId="${ARTIFACT_ID}"
+			-Dversion="${VERSION}"
+			-Dpackaging="${PACKAGING}"
+			-Dfile="${SRC_FILE}"
+	)
+
+	doing "Deploying [${SRC_FILE}]..."
+	OUT="$( "${CMD[@]}" 2>&1 )" || fail "Failed to deploy [${SRC_FILE}] (rc=${?}):\n\tCommand: [ ${CMD[@]@Q} ]\n\n${OUT}"
+	ok "Deployed!"
+done
