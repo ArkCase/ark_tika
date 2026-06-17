@@ -11,16 +11,24 @@ GROUP_ID="org.apache.tika"
 BASE_VERSION="3.3.1"
 VERSION="${BASE_VERSION}-arm01"
 
-# Artifacts:
-#	tika-app
-#	tika-emitter-fs
-#	tika-emitter-jdbc
-#	tika-emitter-s3
-#	tika-emitter-solr
-#	tika-fetcher-s3
-#	tika-server-standard
+JARS=(
+	tika-app
+	tika-emitter-fs
+	tika-emitter-jdbc
+	tika-emitter-s3
+	tika-emitter-solr
+	tika-fetcher-s3
+	tika-server-standard
+)
 
-for FILE in "${@}" ; do
+list_jars()
+{
+	for JAR in "${@}" ; do
+		find .. -type f -ipath '*/target/*' -name "${JAR}-${BASE_VERSION}.jar"
+	done | sort -u
+}
+
+while read FILE ; do
 	SRC_FILE="$(readlink -f "${FILE}")"
 
 	NAME="$(basename "${FILE}")"
@@ -43,4 +51,4 @@ for FILE in "${@}" ; do
 	doing "Deploying [${SRC_FILE}]..."
 	OUT="$( "${CMD[@]}" 2>&1 )" || fail "Failed to deploy [${SRC_FILE}] (rc=${?}):\n\tCommand: [ ${CMD[@]@Q} ]\n\n${OUT}"
 	ok "Deployed!"
-done
+done < <(list_jars "${JARS[@]}")

@@ -1,0 +1,44 @@
+diff --git a/tika-grpc/src/test/java/org/apache/tika/pipes/grpc/PipesBiDirectionalStreamingIntegrationTest.java b/tika-grpc/src/test/java/org/apache/tika/pipes/grpc/PipesBiDirectionalStreamingIntegrationTest.java
+index 87f131da8..2b95a1803 100644
+--- a/tika-grpc/src/test/java/org/apache/tika/pipes/grpc/PipesBiDirectionalStreamingIntegrationTest.java
++++ b/tika-grpc/src/test/java/org/apache/tika/pipes/grpc/PipesBiDirectionalStreamingIntegrationTest.java
+@@ -41,7 +41,7 @@ import org.apache.commons.io.FileUtils;
+ import org.awaitility.Awaitility;
+ import org.eclipse.jetty.server.Server;
+ import org.eclipse.jetty.server.handler.ResourceHandler;
+-import org.eclipse.jetty.util.resource.PathResource;
++import org.eclipse.jetty.util.resource.ResourceFactory;
+ import org.junit.jupiter.api.AfterAll;
+ import org.junit.jupiter.api.Assertions;
+ import org.junit.jupiter.api.BeforeAll;
+@@ -94,7 +94,7 @@ class PipesBiDirectionalStreamingIntegrationTest {
+ 
+         ResourceHandler resourceHandler = new ResourceHandler();
+         resourceHandler.setDirAllowed(true);
+-        resourceHandler.setBaseResource(new PathResource(Paths.get("src", "test", "resources", "test-files")));
++        resourceHandler.setBaseResource(ResourceFactory.root().newResource(Paths.get("src", "test", "resources", "test-files")));
+         httpServer.setHandler(resourceHandler);
+         httpServer.start();
+ 
+diff --git a/tika-parent/pom.xml b/tika-parent/pom.xml
+index eb3aaf789..6c05146f9 100644
+--- a/tika-parent/pom.xml
++++ b/tika-parent/pom.xml
+@@ -382,7 +382,7 @@
+     <jdom2.version>2.0.6.1</jdom2.version>
+     <jempbox.version>1.8.17</jempbox.version>
+     <!-- 12.0.* needs java 17 -->
+-    <jetty.version>11.0.26</jetty.version>
++    <jetty.version>12.1.7</jetty.version>
+     <!-- 2.0.* needs java 17 -->
+     <jhighlight.version>1.1.1</jhighlight.version>
+     <jna.version>5.18.1</jna.version>
+@@ -409,7 +409,7 @@
+     <mockito.version>5.23.0</mockito.version>
+     <mockito-junit-jupiter.version>5.23.0</mockito-junit-jupiter.version>
+     <netcdf-java.version>4.5.5</netcdf-java.version>
+-    <netty.version>4.2.13.Final</netty.version>
++    <netty.version>4.2.15.Final</netty.version>
+     <oak.jackrabbit.version>2.0.0</oak.jackrabbit.version>
+     <openjson.version>1.0.13</openjson.version>
+     <!-- 2.3.0 requires jdk17 -->
