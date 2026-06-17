@@ -132,7 +132,7 @@ RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
     mvn-get "${TIKA_GROUP}:tika-emitter-fs:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${TIKA_GROUP}:tika-emitter-jdbc:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${TIKA_GROUP}:tika-emitter-s3:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-emitter-solr:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
+    # mvn-get "${TIKA_GROUP}:tika-emitter-solr:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${TIKA_GROUP}:tika-fetcher-s3:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${LOG4J_JUL_SRC}" "${LIB_DIR}" && \
     mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
