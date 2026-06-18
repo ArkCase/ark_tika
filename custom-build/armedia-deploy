@@ -24,9 +24,15 @@ JARS=(
 list_jars()
 {
 	for JAR in "${@}" ; do
-		find .. -type f -ipath '*/target/*' -name "${JAR}-${BASE_VERSION}.jar"
+		find . -type f -ipath '*/target/*' -name "${JAR}-${BASE_VERSION}.jar"
 	done | sort -u
 }
+
+if ROOT="$(git rev-parse --show-toplevel 2>&1)" ; then
+	cd "${ROOT}" || fail "Failed to CD into the Git root [${ROOT}] (rc=${?})"
+else
+	warn "Not in a git repository - so YMMV (rc=${?}: ${ROOT})"
+fi
 
 while read FILE ; do
 	SRC_FILE="$(readlink -f "${FILE}")"
@@ -49,6 +55,6 @@ while read FILE ; do
 	)
 
 	doing "Deploying [${SRC_FILE}]..."
-	OUT="$( "${CMD[@]}" 2>&1 )" || fail "Failed to deploy [${SRC_FILE}] (rc=${?}):\n\tCommand: [ ${CMD[@]@Q} ]\n\n${OUT}"
+	OUT="$( echo "${CMD[@]}" 2>&1 )" || fail "Failed to deploy [${SRC_FILE}] (rc=${?}):\n\tCommand: [ ${CMD[@]@Q} ]\n\n${OUT}"
 	ok "Deployed!"
 done < <(list_jars "${JARS[@]}")
