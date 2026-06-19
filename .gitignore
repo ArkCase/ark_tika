@@ -1,7 +1,5 @@
-*.orig
-**/.*.swp
-**/.swp
-*.zip
-*.tgz
-*.tar.gz
-artifacts/
+**/.sw?
+**/.*.sw?
+
+**/compliance*
+**/vulnerabilities*
