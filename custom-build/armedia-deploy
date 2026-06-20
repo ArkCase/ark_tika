@@ -54,7 +54,7 @@ while read FILE ; do
 			-Dfile="${SRC_FILE}"
 	)
 
-	doing "Deploying [${SRC_FILE}]..."
+	doing "Deploying [${SRC_FILE}] (as version ${VERSION})..."
 	OUT="$( echo "${CMD[@]}" 2>&1 )" || fail "Failed to deploy [${SRC_FILE}] (rc=${?}):\n\tCommand: [ ${CMD[@]@Q} ]\n\n${OUT}"
 	ok "Deployed!"
 done < <(list_jars "${JARS[@]}")
