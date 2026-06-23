@@ -27,6 +27,7 @@
 ###########################################################################################################
 
 ARG FIPS=""
+ARG PRIVATE_REGISTRY
 ARG PUBLIC_REGISTRY="public.ecr.aws"
 ARG ARCH="amd64"
 ARG OS="linux"
@@ -43,15 +44,33 @@ ARG ARK_TIKA_JAR_ARTIFACT="arkcase-tika"
 ARG ARK_TIKA_JAR_VERSION="1.0.0-TEST-01"
 ARG ARK_TIKA_JAR_SRC="${ARK_TIKA_JAR_GROUP}:${ARK_TIKA_JAR_ARTIFACT}:${ARK_TIKA_JAR_VERSION}"
 
-ARG TIKA_MVN_REPO="https://nexus.armedia.com/repository/arkcase.thirdparty/"
-ARG TIKA_GROUP="org.apache.tika"
-ARG TIKA_VER="${VER}-arm01"
-
 ARG BASE_REGISTRY="${PUBLIC_REGISTRY}"
 ARG BASE_REPO="arkcase/base-java"
 ARG BASE_VER="24.04"
 ARG BASE_VER_PFX=""
 ARG BASE_IMG="${BASE_REGISTRY}/${BASE_REPO}${FIPS}:${BASE_VER_PFX}${BASE_VER}"
+
+ARG BUILDER_REGISTRY="${PRIVATE_REGISTRY}"
+ARG BUILDER_REPO="arkcase/jenkins-build"
+ARG BUILDER_VER="latest"
+ARG BUILDER_VER_PFX="${BASE_VER_PFX}"
+ARG BUILDER_IMG="${BUILDER_REGISTRY}/${BUILDER_REPO}:${BUILDER_VER_PFX}${BUILDER_VER}"
+
+FROM "${BUILDER_IMG}" AS builder
+
+ARG VER
+ARG BASE_IMG
+ARG TIKA_GIT="https://github.com/apache/tika.git"
+
+USER "root"
+ENV TOOLS_JAVA="21"
+RUN --mount=type=bind,target=/src \
+    export WORK="$(mktemp --directory --tmpdir=/tmp git-build.XXXXXX)" && \
+    cd "${WORK}" && \
+    git clone "${TIKA_GIT}" "${WORK}" --branch="${VER}" && \
+    patch -p1 < /src/custom-build/patches.diff && \
+    /configure mvn -T 4 -DskipTests clean verify && \
+    /src/custom-build/armedia-deploy --local
 
 FROM "${BASE_IMG}"
 
@@ -127,15 +146,13 @@ RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
     . /run/secrets/mvn_get_auth && \
     umask 0022 && \
     mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-app:${TIKA_VER}" "${TIKA_MVN_REPO}" "/usr/local/bin/tika.jar" && \
-    mvn-get "${TIKA_GROUP}:tika-server-standard:${TIKA_VER}" "${TIKA_MVN_REPO}" "/usr/local/bin/tika-server.jar" && \
-    mvn-get "${TIKA_GROUP}:tika-emitter-fs:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-emitter-jdbc:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-emitter-s3:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
-    # mvn-get "${TIKA_GROUP}:tika-emitter-solr:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
-    mvn-get "${TIKA_GROUP}:tika-fetcher-s3:${TIKA_VER}" "${TIKA_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${LOG4J_JUL_SRC}" "${LIB_DIR}" && \
     mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
+
+COPY --chmod=0644 --chown=root:root --from=builder /tika-app-*.jar /usr/local/bin/tika.jar
+COPY --chmod=0644 --chown=root:root --from=builder /tika-server-*.jar /usr/local/bin/tika-server.jar
+COPY --chmod=0644 --chown=root:root --from=builder /tika-emitter-*.jar "${LIB_DIR}"
+COPY --chmod=0644 --chown=root:root --from=builder /tika-fetcher-*.jar "${LIB_DIR}"
 
 #
 # Install the remaining files

@@ -16,7 +16,7 @@ JARS=(
 	tika-emitter-fs
 	tika-emitter-jdbc
 	tika-emitter-s3
-	tika-emitter-solr
+	# tika-emitter-solr
 	tika-fetcher-s3
 	tika-server-standard
 )
@@ -28,22 +28,18 @@ list_jars()
 	done | sort -u
 }
 
-if ROOT="$(git rev-parse --show-toplevel 2>&1)" ; then
-	cd "${ROOT}" || fail "Failed to CD into the Git root [${ROOT}] (rc=${?})"
-else
-	warn "Not in a git repository - so YMMV (rc=${?}: ${ROOT})"
-fi
+deploy_mvn()
+{
+	local FILE="${1}"
+	local SRC_FILE="${2}"
 
-while read FILE ; do
-	SRC_FILE="$(readlink -f "${FILE}")"
+	local NAME="$(basename "${FILE}")"
+	local PACKAGING="${NAME##*.}"
+	local NAME="${NAME%.*}"
 
-	NAME="$(basename "${FILE}")"
-	PACKAGING="${NAME##*.}"
-	NAME="${NAME%.*}"
+	local ARTIFACT_ID="${NAME//-${BASE_VERSION}/}"
 
-	ARTIFACT_ID="${NAME//-${BASE_VERSION}/}"
-
-	CMD=(
+	local CMD=(
 		mvn deploy:deploy-file
 			-DrepositoryId="${REPOSITORY_ID}"
 			-Durl="${REPOSITORY}"
@@ -54,7 +50,34 @@ while read FILE ; do
 			-Dfile="${SRC_FILE}"
 	)
 
+	local OUT=""
 	doing "Deploying [${SRC_FILE}] (as version ${VERSION})..."
 	OUT="$( "${CMD[@]}" 2>&1 )" || fail "Failed to deploy [${SRC_FILE}] (rc=${?}):\n\tCommand: [ ${CMD[@]@Q} ]\n\n${OUT}"
+}
+
+deploy_local()
+{
+	local FILE="${1}"
+	local SRC_FILE="${2}"
+	local OUT=""
+
+	doing "Deploying [${SRC_FILE}] to /"
+	OUT="$(cp -vf "${SRC_FILE}" / 2>&1)" || fail "Failed to deploy [${SRC_FILE}] (rc=${?}): ${OUT}"
+}
+
+CMD="deploy_mvn"
+if [ ${#} -eq 1 ] && [ "${1}" == "--local" ] ; then
+	CMD="deploy_local"
+fi
+
+if ROOT="$(git rev-parse --show-toplevel 2>&1)" ; then
+	cd "${ROOT}" || fail "Failed to CD into the Git root [${ROOT}] (rc=${?})"
+else
+	warn "Not in a git repository - so YMMV (rc=${?}: ${ROOT})"
+fi
+
+while read FILE ; do
+	SRC_FILE="$(readlink -f "${FILE}")"
+	"${CMD}" "${FILE}" "${SRC_FILE}" || exit ${?}
 	ok "Deployed!"
 done < <(list_jars "${JARS[@]}")
