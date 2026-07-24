@@ -31,10 +31,10 @@ ARG PRIVATE_REGISTRY
 ARG PUBLIC_REGISTRY="public.ecr.aws"
 ARG ARCH="amd64"
 ARG OS="linux"
-ARG VER="3.3.1"
+ARG VER="3.3.2"
 ARG PKG="tika"
 ARG KEYS="https://www.apache.org/dist/tika/KEYS"
-ARG LOG4J_VER="2.26.0"
+ARG LOG4J_VER="2.26.1"
 ARG LOG4J_JUL_SRC="org.apache.logging.log4j:log4j-jul:${LOG4J_VER}:jar"
 ARG JAVA="17"
 
