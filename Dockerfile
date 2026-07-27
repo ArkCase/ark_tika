@@ -50,27 +50,15 @@ ARG BASE_VER="24.04"
 ARG BASE_VER_PFX=""
 ARG BASE_IMG="${BASE_REGISTRY}/${BASE_REPO}${FIPS}:${BASE_VER_PFX}${BASE_VER}"
 
-ARG BUILDER_REGISTRY="${PRIVATE_REGISTRY}"
-ARG BUILDER_REPO="arkcase/jenkins-build"
-ARG BUILDER_VER="latest"
-ARG BUILDER_VER_PFX="${BASE_VER_PFX}"
-ARG BUILDER_IMG="${BUILDER_REGISTRY}/${BUILDER_REPO}:${BUILDER_VER_PFX}${BUILDER_VER}"
+ARG TIKA_REG="${PRIVATE_REGISTRY}"
+ARG TIKA_REPO="arkcase/rebuild-tika"
+ARG TIKA_VER="${VER}"
+ARG TIKA_VER_PFX="${BASE_VER_PFX}"
+ARG TIKA_IMG="${TIKA_REG}/${TIKA_REPO}:${TIKA_VER_PFX}${TIKA_VER}"
 
-FROM "${BUILDER_IMG}" AS builder
+FROM "${TIKA_IMG}" AS tika
 
-ARG VER
 ARG BASE_IMG
-ARG TIKA_GIT="https://github.com/apache/tika.git"
-
-USER "root"
-ENV TOOLS_JAVA="21"
-RUN --mount=type=bind,target=/src \
-    export WORK="$(mktemp --directory --tmpdir=/tmp git-build.XXXXXX)" && \
-    cd "${WORK}" && \
-    git clone "${TIKA_GIT}" "${WORK}" --branch="${VER}" && \
-    patch -p1 < /src/custom-build/patches.diff && \
-    /configure mvn -T 4 -DskipTests clean verify && \
-    /src/custom-build/armedia-deploy --local
 
 FROM "${BASE_IMG}"
 
@@ -149,10 +137,8 @@ RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
     mvn-get "${LOG4J_JUL_SRC}" "${LIB_DIR}" && \
     mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
 
-COPY --chmod=0644 --chown=root:root --from=builder /tika-app-*.jar /usr/local/bin/tika.jar
-COPY --chmod=0644 --chown=root:root --from=builder /tika-server-*.jar /usr/local/bin/tika-server.jar
-COPY --chmod=0644 --chown=root:root --from=builder /tika-emitter-*.jar "${LIB_DIR}"
-COPY --chmod=0644 --chown=root:root --from=builder /tika-fetcher-*.jar "${LIB_DIR}"
+COPY --chmod=0644 --chown=root:root --from=tika /tika-app-*.jar /tika-server-*.jar /usr/local/bin/
+COPY --chmod=0644 --chown=root:root --from=tika /tika-emitter-*.jar /tika-fetcher-*.jar "${LIB_DIR}"
 
 #
 # Install the remaining files
