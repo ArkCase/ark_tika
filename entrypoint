@@ -93,4 +93,6 @@ to_array EXTRA_ARGS || fail "The extra arguments string [${EXTRA_ARGS}] could no
 
 set_or_default TIKA_SERVER_CLASS "org.apache.tika.server.core.TikaServerCli"
 
-execute java -cp "/usr/local/bin/tika-server.jar:${CP}" -p "${MP}" "${TIKA_SERVER_CLASS}" "${EXTRA_ARGS[@]}" --port "${PORT}" --host "*" "${TIKA_CONF[@]}"
+SERVER_JAR="$(find /usr/local/bin -type f -name "tika-server-*.jar" | sort | tail -1)"
+require_file_readable "${SERVER_JAR}"
+execute java -cp "${SERVER_JAR}:${CP}" -p "${MP}" "${TIKA_SERVER_CLASS}" "${EXTRA_ARGS[@]}" --port "${PORT}" --host "*" "${TIKA_CONF[@]}"
