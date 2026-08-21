@@ -56,7 +56,7 @@ ARG TIKA_VER="${VER}"
 ARG TIKA_VER_PFX="${BASE_VER_PFX}"
 ARG TIKA_IMG="${TIKA_REG}/${TIKA_REPO}:${TIKA_VER_PFX}${TIKA_VER}"
 
-FROM "${TIKA_IMG}" AS tika
+FROM "${TIKA_IMG}" AS tika-src
 
 ARG BASE_IMG
 
@@ -137,8 +137,8 @@ RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
     mvn-get "${LOG4J_JUL_SRC}" "${LIB_DIR}" && \
     mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
 
-COPY --chmod=0644 --chown=root:root --from=tika /tika-app-*.jar /tika-server-*.jar /usr/local/bin/
-COPY --chmod=0644 --chown=root:root --from=tika /tika-emitter-*.jar /tika-fetcher-*.jar "${LIB_DIR}"
+COPY --chmod=0644 --chown=root:root --from=tika-src /tika-app-*.jar /tika-server-*.jar /usr/local/bin/
+COPY --chmod=0644 --chown=root:root --from=tika-src /tika-emitter-*.jar /tika-fetcher-*.jar "${LIB_DIR}"
 
 #
 # Install the remaining files
