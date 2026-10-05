@@ -31,7 +31,7 @@ ARG PRIVATE_REGISTRY
 ARG PUBLIC_REGISTRY="public.ecr.aws"
 ARG ARCH="amd64"
 ARG OS="linux"
-ARG VER="3.3.2"
+ARG VER="3.3.2.1"
 ARG PKG="tika"
 ARG KEYS="https://www.apache.org/dist/tika/KEYS"
 ARG LOG4J_VER="2.26.1"
@@ -39,26 +39,25 @@ ARG LOG4J_JUL_SRC="org.apache.logging.log4j:log4j-jul:${LOG4J_VER}:jar"
 ARG JAVA="17"
 
 ARG ARKCASE_MVN_REPO="https://nexus.armedia.com/repository/arkcase/"
+
 ARG ARK_TIKA_JAR_GROUP="com.armedia"
 ARG ARK_TIKA_JAR_ARTIFACT="arkcase-tika"
 ARG ARK_TIKA_JAR_VERSION="1.0.5"
 ARG ARK_TIKA_JAR_SRC="${ARK_TIKA_JAR_GROUP}:${ARK_TIKA_JAR_ARTIFACT}:${ARK_TIKA_JAR_VERSION}"
+
+ARG ARK_TIKA_GROUP="org.apache.tika"
+ARG ARK_TIKA_APP_SRC="${ARK_TIKA_GROUP}:tika-app:${VER}"
+ARG ARK_TIKA_SRV_SRC="${ARK_TIKA_GROUP}:tika-server-standard:${VER}"
+ARG ARK_TIKA_EM_FS_SRC="${ARK_TIKA_GROUP}:tika-emitter-fs:${VER}"
+ARG ARK_TIKA_EM_JDBC_SRC="${ARK_TIKA_GROUP}:tika-emitter-jdbc:${VER}"
+ARG ARK_TIKA_EM_S3_SRC="${ARK_TIKA_GROUP}:tika-emitter-s3:${VER}"
+ARG ARK_TIKA_FE_S3_SRC="${ARK_TIKA_GROUP}:tika-fetcher-s3:${VER}"
 
 ARG BASE_REGISTRY="${PUBLIC_REGISTRY}"
 ARG BASE_REPO="arkcase/base-java"
 ARG BASE_VER="24.04"
 ARG BASE_VER_PFX=""
 ARG BASE_IMG="${BASE_REGISTRY}/${BASE_REPO}${FIPS}:${BASE_VER_PFX}${BASE_VER}"
-
-ARG TIKA_REG="${PRIVATE_REGISTRY}"
-ARG TIKA_REPO="arkcase/rebuild-tika"
-ARG TIKA_VER="${VER}"
-ARG TIKA_VER_PFX="${BASE_VER_PFX}"
-ARG TIKA_IMG="${TIKA_REG}/${TIKA_REPO}:${TIKA_VER_PFX}${TIKA_VER}"
-
-FROM "${TIKA_IMG}" AS tika-src
-
-ARG BASE_IMG
 
 FROM "${BASE_IMG}"
 
@@ -77,9 +76,12 @@ ARG JAVA
 ARG ARKCASE_MVN_REPO
 ARG ARK_TIKA_JAR_VERSION
 ARG ARK_TIKA_JAR_SRC
-ARG TIKA_MVN_REPO
-ARG TIKA_GROUP
-ARG TIKA_VER
+ARG ARK_TIKA_APP_SRC
+ARG ARK_TIKA_SRV_SRC
+ARG ARK_TIKA_EM_FS_SRC
+ARG ARK_TIKA_EM_JDBC_SRC
+ARG ARK_TIKA_EM_S3_SRC
+ARG ARK_TIKA_FE_S3_SRC
 
 #
 # Basic Parameters
@@ -134,11 +136,14 @@ RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
     . /run/secrets/mvn_get_auth && \
     umask 0022 && \
     mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" "${LIB_DIR}" && \
+    mvn-get "${ARK_TIKA_APP_SRC}" "${ARKCASE_MVN_REPO}" "/usr/local/bin" && \
+    mvn-get "${ARK_TIKA_SRV_SRC}" "${ARKCASE_MVN_REPO}" "/usr/local/bin" && \
+    mvn-get "${ARK_TIKA_EM_FS_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}" && \
+    mvn-get "${ARK_TIKA_EM_JDBC_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}" && \
+    mvn-get "${ARK_TIKA_EM_S3_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}" && \
+    mvn-get "${ARK_TIKA_FE_S3_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${LOG4J_JUL_SRC}" "${LIB_DIR}" && \
     mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
-
-COPY --chmod=0644 --chown=root:root --from=tika-src /tika-app-*.jar /tika-server-*.jar /usr/local/bin/
-COPY --chmod=0644 --chown=root:root --from=tika-src /tika-emitter-*.jar /tika-fetcher-*.jar "${LIB_DIR}"
 
 #
 # Install the remaining files
