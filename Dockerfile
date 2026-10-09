@@ -31,7 +31,7 @@ ARG PRIVATE_REGISTRY
 ARG PUBLIC_REGISTRY="public.ecr.aws"
 ARG ARCH="amd64"
 ARG OS="linux"
-ARG VER="3.3.2.1"
+ARG VER="3.3.2.2"
 ARG PKG="tika"
 ARG KEYS="https://www.apache.org/dist/tika/KEYS"
 ARG LOG4J_VER="2.26.1"
