@@ -130,7 +130,8 @@ RUN set-java "${JAVA}" && \
         ttf-mscorefonts-installer \
         cabextract \
       && \
-    apt-get clean -y
+    apt-get clean -y && \
+    chmod go-r /var/log/fontconfig*
 
 RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
     . /run/secrets/mvn_get_auth && \
