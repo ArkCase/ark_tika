@@ -45,6 +45,7 @@ set_or_default JAVA_TOOL_OPTIONS ""
 
 # Require SSL for Zookeeper
 JAVA_TOOL_OPTIONS+="${JAVA_TOOL_OPTIONS:+ }-XX:MinRAMPercentage=50.0 -XX:MaxRAMPercentage=80.0 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"
+export JAVA_TOOL_OPTIONS
 
 export TEMP="${TEMP_DIR}"
 export TMP="${TEMP_DIR}"
@@ -54,6 +55,7 @@ CONFIG_CANDIDATES=( "${TIKA_CONFIG}" "${CONF_DIR}/server.xml" )
 
 set_or_default SSL_DIR
 set_or_default POD_NAME "$(hostname -f)"
+export POD_NAME
 set_as_boolean DEBUG_LOG "false"
 
 TIKA_CONF=()
