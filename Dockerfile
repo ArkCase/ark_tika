@@ -112,7 +112,9 @@ ENV PATH="${HOME_DIR}/bin:${PATH}"
 #
 # Update local packages and install required packages
 #
-RUN set-java "${JAVA}" && \
+RUN --mount=type=bind,target=/src \
+    --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
+    set-java "${JAVA}" && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get -y install \
@@ -131,9 +133,7 @@ RUN set-java "${JAVA}" && \
         cabextract \
       && \
     apt-get clean -y && \
-    chmod go-r /var/log/fontconfig*
-
-RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
+    chmod go-r /var/log/fontconfig* && \
     . /run/secrets/mvn_get_auth && \
     umask 0022 && \
     mkdir -p "${CONF_DIR}" "${LOGS_DIR}" "${TEMP_DIR}" "${LIB_DIR}" && \
@@ -144,24 +144,13 @@ RUN --mount=type=secret,id=mvn_get_auth,uid=${APP_UID},gid=${APP_GID} \
     mvn-get "${ARK_TIKA_EM_S3_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${ARK_TIKA_FE_S3_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}" && \
     mvn-get "${LOG4J_JUL_SRC}" "${LIB_DIR}" && \
-    mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}"
-
-#
-# Install the remaining files
-#
-COPY --chown=root:root --chmod=0755 entrypoint /
-
-#
-# Create the required user/group
-#
-RUN groupadd --gid "${APP_GID}" "${APP_GROUP}" && \
-    useradd  --uid "${APP_UID}" --gid "${APP_GROUP}" --groups "${ACM_GROUP}" --create-home --home-dir "${HOME_DIR}" "${APP_USER}"
-
-COPY --chown=${APP_GID}:${APP_UID} --chmod=0644 server.xml "${CONF_DIR}/server.xml"
-
-RUN --mount=type=bind,source=CVE,target=/CVE apply-fixes /CVE
-
-RUN rm -rf /tmp/* && \
+    mvn-get "${ARK_TIKA_JAR_SRC}" "${ARKCASE_MVN_REPO}" "${LIB_DIR}" && \
+    install -o root -g root -m 0755 /src/entrypoint /usr/local/bin && \
+    groupadd --gid "${APP_GID}" "${APP_GROUP}" && \
+    useradd  --uid "${APP_UID}" --gid "${APP_GROUP}" --groups "${ACM_GROUP}" --create-home --home-dir "${HOME_DIR}" "${APP_USER}" && \
+    install -o "${APP_UID}" -g "${APP_GID}" -m 0644 /src/server.xml "${CONF_DIR}" && \
+    apply-fixes /src/CVE && \
+    rm -rf /tmp/* && \
     mkdir -p "${HOME_DIR}/bin" && \
     chown -R "${APP_USER}:${APP_GROUP}" "${BASE_DIR}" && \
     chmod -R "u=rwX,g=rX,o=" "${BASE_DIR}" && \
@@ -173,5 +162,3 @@ RUN rm -rf /tmp/* && \
 USER "${APP_USER}"
 
 EXPOSE 8443
-
-ENTRYPOINT [ "/entrypoint" ]
