@@ -133,6 +133,7 @@ RUN --mount=type=bind,target=/src \
         cabextract \
       && \
     apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/* && \
     chmod go-r /var/log/fontconfig* && \
     . /run/secrets/mvn_get_auth && \
     umask 0022 && \
